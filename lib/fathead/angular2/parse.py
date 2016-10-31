@@ -66,6 +66,46 @@ class Parser():
 			return mainContent
 		
 		
+		if apiDocType == 'pipe':
+			mainContent = "<section class='prog__container'>"
+			description = ""
+			code = ""
+			for row in rows:
+				childRows = row.findAll("div")
+				if childRows[0].text == "What it does":
+					description = childRows[1].text
+				if childRows[0].text == "Description":
+					description = description + "\n" + childRows[1].find("p").text
+				if childRows[0].text == "How to use":
+					code = childRows[1].text
+			mainContent = mainContent + "<p>"
+			mainContent = mainContent + description
+			mainContent = mainContent + "</p>"
+			mainContent = mainContent + "<pre><code>"
+			mainContent = mainContent + code
+			mainContent = mainContent + "</pre></code></section>"
+			mainContent = mainContent.replace("\n", "\\n")
+			return mainContent
+		
+		
+		if apiDocType == 'class':
+			mainContent = "<section class='prog__container'>"
+			description = ""
+			code = ""
+			for row in rows:
+				childRows = row.findAll("div")
+				if childRows[0].text == "Class Description":
+					descriptionDiv = childRows[1]
+			description = "\n".join([x.text for x in descriptionDiv.findAll("p")])
+			code = descriptionDiv.find("code-example").text
+			mainContent = mainContent + "<p>"
+			mainContent = mainContent + description
+			mainContent = mainContent + "</p>"
+			mainContent = mainContent + "<pre><code>"
+			mainContent = mainContent + code
+			mainContent = mainContent + "</pre></code></section>"
+			mainContent = mainContent.replace("\n", "\\n")
+			return mainContent
 	
 	def output(self, apiName, apiDocType, parserApiContent, apiPath):
 		apiUrl = self.API_BASE_URL + apiPath
@@ -105,7 +145,13 @@ if __name__ == "__main__":
 # 	apiHtmlContent = parser.fetchApiContent("NgClass", "common/index/NgClass-directive.html")
 # 	parsedApiContent = parser.parseApiContent("NgClass", "directive", apiHtmlContent)
 # 	parser.output("NgClass", "directive", parsedApiContent, "common/index/NgClass-directive.html")
-	apiHtmlContent = parser.fetchApiContent("APP_BASE_HREF", "common/index/APP_BASE_HREF-let.html")
-	parsedApiContent = parser.parseApiContent("APP_BASE_HREF", "let", apiHtmlContent)
-	print parsedApiContent
+# 	apiHtmlContent = parser.fetchApiContent("APP_BASE_HREF", "common/index/APP_BASE_HREF-let.html")
+# 	parsedApiContent = parser.parseApiContent("APP_BASE_HREF", "let", apiHtmlContent)
 # 	parser.output("APP_BASE_HREF", "let", parsedApiContent, "common/index/APP_BASE_HREF-let.html")
+# 	apiHtmlContent = parser.fetchApiContent("AsyncPipe", "common/index/AsyncPipe-pipe.html")
+# 	parsedApiContent = parser.parseApiContent("AsyncPipe", "pipe", apiHtmlContent)
+# 	parser.output("AsyncPipe", "pipe", parsedApiContent, "common/index/AsyncPipe-pipe.html")
+	apiHtmlContent = parser.fetchApiContent("Location", "common/index/Location-class.html")
+	parsedApiContent = parser.parseApiContent("Location", "class", apiHtmlContent)
+# 	parser.output("Location", "class", parsedApiContent, "common/index/Location-class.html")
+	print parsedApiContent
