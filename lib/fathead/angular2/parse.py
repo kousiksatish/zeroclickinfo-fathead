@@ -2,6 +2,36 @@ import requests
 from bs4 import BeautifulSoup
 import json
 
+def encodeHtml(s):
+	htmlCodes = (
+		("'", '&#39;'),
+		('"', '&quot;'),
+		('>', '&gt;'),
+		('<', '&lt;'),
+		('&', '&amp;')
+	)
+	for code in htmlCodes:
+		s = s.replace(code[1], code[0])
+	print s
+	return s
+
+def htmlContentFormer(description, code1 = "None", code2 = "None"):
+	mainContent = "<section class='prog__container'>"
+	mainContent = mainContent + "<p>"
+	mainContent = mainContent + description
+	mainContent = mainContent + "</p>"
+	if code1 != "None":
+		mainContent = mainContent + "<pre><code>"
+		mainContent = mainContent + code1
+		mainContent = mainContent + "</pre></code>"
+	if code2 != "None":
+		mainContent = mainContent + "<pre><code>"
+		mainContent = mainContent + code1
+		mainContent = mainContent + "</pre></code>"
+	mainContent = mainContent + "</section>"
+	mainContent = mainContent.replace("\n", "\\n")
+	return mainContent
+
 class Parser():
 	API_BASE_URL = "https://angular.io/docs/ts/latest/api/"
 	def __init__(self):
@@ -24,7 +54,6 @@ class Parser():
 		apiSoup = BeautifulSoup(apiHtmlContent, 'html.parser')
 		rows = apiSoup.findAll("div", {"layout": "row"})
 		if apiDocType=='directive':
-			mainContent = "<section class='prog__container'>"
 			description = ""
 			code = ""
 			for row in rows:
@@ -33,21 +62,9 @@ class Parser():
 					description = childRows[1].text 
 				if childRows[0].text == "How to use":
 					code = childRows[1].text
-			print description, code
-			mainContent = mainContent + "<p>"
-			mainContent = mainContent + description
-			mainContent = mainContent + "</p>"
-			mainContent = mainContent + "<pre><code>"
-			mainContent = mainContent + code
-			mainContent = mainContent + "</pre></code></section>"
-			mainContent = mainContent.replace("\n", "\\n")
-			return mainContent
-			
-			
-			
+			return htmlContentFormer(description, code)
 			
 		if apiDocType == 'let':
-			mainContent = "<section class='prog__container'>"
 			description = ""
 			code = ""
 			for row in rows:
@@ -55,19 +72,14 @@ class Parser():
 				if childRows[0].text == "Variable Export":
 					descriptionDiv = childRows[1]
 			description = "\n".join([x.text for x in descriptionDiv.findAll("p")])
-			code = descriptionDiv.find("code-example").text
-			mainContent = mainContent + "<p>"
-			mainContent = mainContent + description
-			mainContent = mainContent + "</p>"
-			mainContent = mainContent + "<pre><code>"
-			mainContent = mainContent + code
-			mainContent = mainContent + "</pre></code></section>"
-			mainContent = mainContent.replace("\n", "\\n")
-			return mainContent
-		
+			code = descriptionDiv.find("code-example")
+			if code:
+				code = code.text
+				return htmlContentFormer(description, code)
+			else:
+				return htmlContentFormer(description)
 		
 		if apiDocType == 'pipe':
-			mainContent = "<section class='prog__container'>"
 			description = ""
 			code = ""
 			for row in rows:
@@ -75,21 +87,13 @@ class Parser():
 				if childRows[0].text == "What it does":
 					description = childRows[1].text
 				if childRows[0].text == "Description":
-					description = description + "\n" + childRows[1].find("p").text
+					if childRows[1].find("p"):
+						description = description + "\n" + childRows[1].find("p").text
 				if childRows[0].text == "How to use":
 					code = childRows[1].text
-			mainContent = mainContent + "<p>"
-			mainContent = mainContent + description
-			mainContent = mainContent + "</p>"
-			mainContent = mainContent + "<pre><code>"
-			mainContent = mainContent + code
-			mainContent = mainContent + "</pre></code></section>"
-			mainContent = mainContent.replace("\n", "\\n")
-			return mainContent
-		
+			return htmlContentFormer(description, code)
 		
 		if apiDocType == 'class':
-			mainContent = "<section class='prog__container'>"
 			description = ""
 			code = ""
 			for row in rows:
@@ -97,17 +101,18 @@ class Parser():
 				if childRows[0].text == "Class Description":
 					descriptionDiv = childRows[1]
 			description = "\n".join([x.text for x in descriptionDiv.findAll("p")])
-			code = descriptionDiv.find("code-example").text
-			mainContent = mainContent + "<p>"
-			mainContent = mainContent + description
-			mainContent = mainContent + "</p>"
-			mainContent = mainContent + "<pre><code>"
-			mainContent = mainContent + code
-			mainContent = mainContent + "</pre></code></section>"
-			mainContent = mainContent.replace("\n", "\\n")
-			return mainContent
+			code = descriptionDiv.find("code-example")
+			if code:
+				code = code.text
+				return htmlContentFormer(description, code)
+			else:
+				return htmlContentFormer(description)
+		
+		else:
+			return "NONE"
+		
 	
-	def output(self, apiName, apiDocType, parserApiContent, apiPath):
+	def output(self, apiName, apiDocType, parsedApiContent, apiPath):
 		apiUrl = self.API_BASE_URL + apiPath
 		outputList = [
 			apiName,				#unique name
@@ -118,13 +123,13 @@ class Parser():
 			'',					#ignore
 			'',					#no related topics
 			'',					#ignore
-			self.API_BASE_URL,		#add an external link back to BeautifulSoup Home
+			'',					#add an external link back to Home
 			'',					#no disambiguation
 			'',					#images
 			parsedApiContent,	#abstract
 			apiUrl				#url to the relevant tag doc
 		]
-		with open('output.txt', 'w+') as output_file:
+		with open('output.txt', 'a') as output_file:
 			output_file.write('{}\n'.format('\t'.join(outputList)))
 	
 	def parseBarrel(self, barrelName, barrelApiList):
@@ -133,6 +138,10 @@ class Parser():
 			print '-'+api['title']
 			apiHtmlContent = self.fetchApiContent(api['title'], api['path'])
 			parsedApiContent = self.parseApiContent(api['title'], api['docType'], apiHtmlContent)
+			if parsedApiContent != "NONE":
+				print api['title'], api['docType']
+				self.output(api['title'], api['docType'], parsedApiContent, api['path'])
+			
 
 	def parse(self):
 		parsedList = json.loads(self.API_LIST)
@@ -140,8 +149,9 @@ class Parser():
 			self.parseBarrel(barrel, parsedList[barrel])
 
 if __name__ == "__main__":
+	open('output.txt', 'w').close()
 	parser = Parser()
-	# parser.parse()'
+	parser.parse()
 # 	apiHtmlContent = parser.fetchApiContent("NgClass", "common/index/NgClass-directive.html")
 # 	parsedApiContent = parser.parseApiContent("NgClass", "directive", apiHtmlContent)
 # 	parser.output("NgClass", "directive", parsedApiContent, "common/index/NgClass-directive.html")
@@ -151,7 +161,7 @@ if __name__ == "__main__":
 # 	apiHtmlContent = parser.fetchApiContent("AsyncPipe", "common/index/AsyncPipe-pipe.html")
 # 	parsedApiContent = parser.parseApiContent("AsyncPipe", "pipe", apiHtmlContent)
 # 	parser.output("AsyncPipe", "pipe", parsedApiContent, "common/index/AsyncPipe-pipe.html")
-	apiHtmlContent = parser.fetchApiContent("Location", "common/index/Location-class.html")
-	parsedApiContent = parser.parseApiContent("Location", "class", apiHtmlContent)
+# 	apiHtmlContent = parser.fetchApiContent("Location", "common/index/Location-class.html")
+# 	parsedApiContent = parser.parseApiContent("Location", "class", apiHtmlContent)
 # 	parser.output("Location", "class", parsedApiContent, "common/index/Location-class.html")
-	print parsedApiContent
+# 	print parsedApiContent
