@@ -108,6 +108,48 @@ class Parser():
 			else:
 				return htmlContentFormer(description)
 		
+		if apiDocType == 'interface':
+			description = ""
+			code = ""
+			whatitdoes_flag = 0
+			details_flag = 0
+			for row in rows:
+				childRows = row.findAll("div")
+				if childRows[0].text == "What it does":
+					whatitdoes_flag = 1
+					whatitdoes = childRows[1].text
+				if childRows[0].text == "Interface Description":
+					descriptionDiv = childRows[1]
+				if childRows[0].text == "Interface Details":
+					detials_flag = 1
+					detailsDiv = childRows[1]
+			if whatitdoes_flag:
+				description = whatitdoes
+			elif len(descriptionDiv.findAll("p")) != 0:
+				description = "\n".join([x.text for x in descriptionDiv.findAll("p")])
+			elif details_flag and detailsDiv.find("p"):
+				description = detailsDiv.find("p").text;
+			else:
+				description = ""
+			return htmlContentFormer(description)
+		
+		if apiDocType == 'function':
+			description = ""
+			code = ""
+			whatitdoes_flag = 0
+			for row in rows:
+				childRows = row.findAll("div")
+				if childRows[0].text == "What it does":
+					whatitdoes_flag = 1
+					whatitdoes = childRows[1].text
+				if childRows[0].text == "Class Export":
+					classexport = childRows[1]
+			if whatitdoes_flag:
+				description = whatitdoes
+			else:
+				description = str(classexport)
+			return htmlContentFormer(description)
+		
 		else:
 			return "NONE"
 		
