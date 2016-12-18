@@ -1,18 +1,18 @@
 import requests
 from bs4 import BeautifulSoup
 import json
+import os.path
 
 def encodeHtml(s):
 	htmlCodes = (
 		("'", '&#39;'),
 		('"', '&quot;'),
-		('>', '&gt;'),
-		('<', '&lt;'),
+# 		('>', '&gt;'),
+# 		('<', '&lt;'),
 		('&', '&amp;')
 	)
 	for code in htmlCodes:
-		s = s.replace(code[1], code[0])
-	print s
+		s = s.replace(code[0], code[1])
 	return s
 
 def htmlContentFormer(description, code1 = "None", code2 = "None"):
@@ -21,11 +21,12 @@ def htmlContentFormer(description, code1 = "None", code2 = "None"):
 	mainContent = mainContent + description
 	mainContent = mainContent + "</p>"
 	if code1 != "None":
-		mainContent = mainContent + "<pre><code>"
+		code1 = encodeHtml(code1)
+		mainContent = mainContent + "<p><pre class='prettyprint no-bg'><code>"
 		mainContent = mainContent + code1
-		mainContent = mainContent + "</pre></code>"
+		mainContent = mainContent + "</pre></code></p>"
 	if code2 != "None":
-		mainContent = mainContent + "<pre><code>"
+		mainContent = mainContent + "<p><pre class='prettyprint no-bg'><code>"
 		mainContent = mainContent + code1
 		mainContent = mainContent + "</pre></code>"
 	mainContent = mainContent + "</section>"
@@ -75,9 +76,9 @@ class Parser():
 			code = descriptionDiv.find("code-example")
 			if code:
 				code = code.text
-				return htmlContentFormer(description, code)
+				return htmlContentFormer(str(descriptionDiv), code)
 			else:
-				return htmlContentFormer(description)
+				return htmlContentFormer(str(descriptionDiv))
 		
 		if apiDocType == 'pipe':
 			description = ""
@@ -104,9 +105,9 @@ class Parser():
 			code = descriptionDiv.find("code-example")
 			if code:
 				code = code.text
-				return htmlContentFormer(description, code)
+				return htmlContentFormer(str(descriptionDiv), code)
 			else:
-				return htmlContentFormer(description)
+				return htmlContentFormer(str(descriptionDiv))
 		
 		if apiDocType == 'interface':
 			description = ""
@@ -150,6 +151,34 @@ class Parser():
 				description = str(classexport)
 			return htmlContentFormer(description)
 		
+		if apiDocType == 'decorator':
+			description = ""
+			code = ""
+			whatitdoes_flag = 0
+			for row in rows:
+				childRows = row.findAll("div")
+				if childRows[0].text == "What it does":
+					whatitdoes_flag = 1
+					whatitdoes = childRows[1].text
+				if childRows[0].text == "Description":
+					descriptionDiv = childRows[1]
+			if whatitdoes_flag:
+				description = whatitdoes
+			elif len(descriptionDiv.findAll("p")) != 0:
+				description = "\n".join([x.text for x in descriptionDiv.findAll("p")])
+			else:
+				description = ""
+			return htmlContentFormer(description)
+		
+		if apiDocType == 'var':
+			description = ""
+			for row in rows:
+				childRows = row.findAll("div")
+				if childRows[0].text == "Variable Export":
+					descriptionDiv = childRows[1]
+			description = "\n".join([x.text for x in descriptionDiv.findAll("p")])
+			return htmlContentFormer(description)
+		
 		else:
 			return "NONE"
 		
@@ -184,26 +213,11 @@ class Parser():
 				print api['title'], api['docType']
 				self.output(api['title'], api['docType'], parsedApiContent, api['path'])
 			
-
 	def parse(self):
 		parsedList = json.loads(self.API_LIST)
 		for barrel in parsedList.keys():
 			self.parseBarrel(barrel, parsedList[barrel])
 
 if __name__ == "__main__":
-	open('output.txt', 'w').close()
 	parser = Parser()
 	parser.parse()
-# 	apiHtmlContent = parser.fetchApiContent("NgClass", "common/index/NgClass-directive.html")
-# 	parsedApiContent = parser.parseApiContent("NgClass", "directive", apiHtmlContent)
-# 	parser.output("NgClass", "directive", parsedApiContent, "common/index/NgClass-directive.html")
-# 	apiHtmlContent = parser.fetchApiContent("APP_BASE_HREF", "common/index/APP_BASE_HREF-let.html")
-# 	parsedApiContent = parser.parseApiContent("APP_BASE_HREF", "let", apiHtmlContent)
-# 	parser.output("APP_BASE_HREF", "let", parsedApiContent, "common/index/APP_BASE_HREF-let.html")
-# 	apiHtmlContent = parser.fetchApiContent("AsyncPipe", "common/index/AsyncPipe-pipe.html")
-# 	parsedApiContent = parser.parseApiContent("AsyncPipe", "pipe", apiHtmlContent)
-# 	parser.output("AsyncPipe", "pipe", parsedApiContent, "common/index/AsyncPipe-pipe.html")
-# 	apiHtmlContent = parser.fetchApiContent("Location", "common/index/Location-class.html")
-# 	parsedApiContent = parser.parseApiContent("Location", "class", apiHtmlContent)
-# 	parser.output("Location", "class", parsedApiContent, "common/index/Location-class.html")
-# 	print parsedApiContent
